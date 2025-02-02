@@ -22,43 +22,51 @@ def solve(matrix: List[List[str]], currX: int, currY: int) -> int:
     return count
 
 
-def is_loop(matrix, startX, startY):
-    directions = [[-1, 0], [0, 1], [1, 0], [0, -1]]
-    idx = 0
-    dirX, dirY = directions[idx]
-    visited = set()
-    currX, currY = startX, startY
+def findLoopCount(currRow: int, currCol: int, matrix: List[List[int]],
+                  visited: set = None, direction: int = 0, checkLoop: bool = False):
+    if visited is None:
+        visited = set()
+    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+    nextRow = directions[direction][0]
+    nextCol = directions[direction][1]
+    count = 0
 
-    while (currX, currY, idx) not in visited:
-        visited.add((currX, currY, idx))
-        nextX, nextY = currX + dirX, currY + dirY
+    while 0 <= currRow < len(matrix) and 0 <= currCol < len(matrix[0]):
 
-        if nextX < 0 or nextX >= len(matrix) or nextY < 0 or nextY >= len(matrix[0]) or matrix[nextX][nextY] == "#":
-            idx = (idx + 1) % 4  # Turn 90 degrees clockwise
-            dirX, dirY = directions[idx]
+        if not checkLoop:
+            if 1 <= currRow < len(matrix) - 1 and 1 <= currCol < len(matrix[0]) - 1 and matrix[currRow + nextRow][
+                    currCol + nextCol] != "#":
+                matrix[currRow + nextRow][currCol + nextCol] = "#"
+
+                alreadyVisited = False
+                for currDir in [0, 1, 2, 3]:
+                    if (currRow + nextRow, currCol + nextCol, currDir) in visited:
+                        alreadyVisited = True
+
+                if not alreadyVisited and findLoopCount(currRow, currCol, matrix, set(), direction, True):
+                    count += 1
+                matrix[currRow + nextRow][currCol + nextCol] = "."
         else:
-            currX, currY = nextX, nextY
+            if (currRow, currCol, direction) in visited:
+                return True
 
-        if (currX, currY) == (startX, startY) and idx == 0:
-            return True  # Return to the start position with the same direction
+        visited.add((currRow, currCol, direction))
 
-    return False
+        # If next position is blocked, change direction and go to the start of the loop without moving
+        if 0 <= currRow + nextRow < len(matrix) and 0 <= currCol + nextCol < len(matrix[0]) and \
+                matrix[currRow + nextRow][currCol + nextCol] == '#':
+            direction = (direction + 1) % 4
+            nextRow = directions[direction][0]
+            nextCol = directions[direction][1]
+            continue
 
+        currRow += nextRow
+        currCol += nextCol
 
-def find_obstruction_positions(matrix, startX, startY):
-    valid_positions = []
+    if checkLoop:
+        return False
 
-    for i in range(len(matrix)):
-        for j in range(len(matrix[0])):
-            if matrix[i][j] == ".":
-                # Temporarily place an obstruction
-                matrix[i][j] = "O"
-                if is_loop(matrix, startX, startY):
-                    valid_positions.append((i, j))
-                # Remove the obstruction
-                matrix[i][j] = "."
-
-    return valid_positions
+    return str(count)
 
 
 def main():
@@ -75,11 +83,8 @@ def main():
                 currX, currY = i, j
                 break
     # res = solve(matrix, currX, currY)
-    # print(res)
-    valid_positions = find_obstruction_positions(matrix, currX, currY)
-    print("Number of possible obstruction positions:", len(valid_positions))
-    for pos in valid_positions:
-        print("Possible obstruction at:", pos)
+    res = findLoopCount(currX, currY, matrix)
+    print(res)
 
 
 if __name__ == "__main__":
